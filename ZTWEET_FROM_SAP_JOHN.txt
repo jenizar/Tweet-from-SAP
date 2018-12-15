@@ -1,0 +1,61 @@
+*&---------------------------------------------------------------------*
+*& Report ZTWEET_FROM_SAP_JOHN
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZTWEET_FROM_SAP_JOHN NO STANDARD PAGE HEADING.
+
+DATA: http_client TYPE REF TO if_http_client .
+DATA: result TYPE string,
+r_str TYPE string,
+wf_string TYPE string,
+s_txt TYPE string.
+DATA: result_tab TYPE TABLE OF string.
+field-symbols: <fs>.
+
+** Selection Screen
+SELECTION-SCREEN begin of block block1 with frame title text_001.
+SELECTION-SCREEN BEGIN OF LINE.
+SELECTION-SCREEN COMMENT (15) TWEET1 FOR FIELD TWEET.
+PARAMETERS : TWEET TYPE C LENGTH 255 OBLIGATORY.
+SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN end of block block1.
+
+AT SELECTION-SCREEN OUTPUT.
+    text_001 = 'Selection Parameter'.
+
+INITIALIZATION.
+  PERFORM SELECTION_SCREEN_TEXT.
+FORM SELECTION_SCREEN_TEXT.
+  TWEET1 = 'Type your Tweet'.
+ENDFORM.
+
+START-OF-SELECTION .
+wf_string = 'http://jenizar.pythonanywhere.com/twitter?tweet='.
+CONCATENATE wf_string tweet INTO s_txt.
+
+CALL METHOD cl_http_client=>create_by_url
+EXPORTING url = s_txt
+IMPORTING client = http_client
+EXCEPTIONS argument_not_found = 1
+plugin_not_active = 2
+internal_error = 3
+OTHERS = 4.
+
+CALL METHOD http_client->send
+EXCEPTIONS
+http_communication_failure = 1
+http_invalid_state = 2.
+
+CALL METHOD http_client->receive
+EXCEPTIONS
+http_communication_failure = 1
+http_invalid_state = 2
+http_processing_failed = 3.
+
+CLEAR result .
+result = http_client->response->get_cdata( ).
+REFRESH result_tab .
+SPLIT result AT cl_abap_char_utilities=>cr_lf INTO TABLE result_tab .
+WRITE : / result.
+ NEW-LINE SCROLLING.
